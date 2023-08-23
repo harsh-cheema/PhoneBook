@@ -32,7 +32,7 @@ void start_phonebook(){
                 getchar();  //to pause window for a while
                 break;
             case 2:
-                sorted_insert();
+                add_contact();
                 getchar();
                 getchar();
                 break;
@@ -83,7 +83,7 @@ void print_choices(){
 void add_contact(){
     system("cls");
     FILE* fp;
-    fp=fopen("phonebook_database","a+");
+    fp=fopen("phonebook_database.txt","a+");
     if(fp==NULL){
         printf("Unable to open the file.Try again !\n");
         printf("Press any key to continue..\n");
@@ -97,7 +97,9 @@ void add_contact(){
         fclose(fp);
         system("clear");
         printf("Contact added Successfully\n");
+        sorted_insert();
         printf("Press any key to continue..\n");
+        
     }
 }
 
@@ -120,7 +122,7 @@ void enter_details(contact* p){
 void display_all_contacts(){
     system("cls");
     FILE* fp;
-    fp=fopen("phonebook_database","r"); //i specifically used binary mode for security
+    fp=fopen("phonebook_database.txt","r"); //i specifically used binary mode for security
     if(fp==NULL){
         printf("Unable to open the file. Try again !\n");
         printf("Press any key to continue..\n");
@@ -167,7 +169,7 @@ void search_contact(){
     scanf("%s",&name);
 
     FILE* fp;
-    fp=fopen("phonebook_database","r"); //i specifically used binary mode for security
+    fp=fopen("phonebook_database.txt","r"); 
     if(fp==NULL){
         printf("Unable to open the file. Try again !\n");
         printf("Press any key to continue..\n");
@@ -216,13 +218,14 @@ void search_contact(){
 
 void delete_contact(){
     system("cls");
+    contact p;
     char name[20];
     printf("Enter name of the person you want to remove from phonebook : ");
-    scanf("%s",name);
+    scanf("%s",&name);
 
     FILE *fp,*temp;
-    fp = fopen("phonebook_database", "r");
-    temp = fopen("temp","w+");
+    fp = fopen("phonebook_database.txt", "r");
+    temp = fopen("temp.txt","w");
     if (fp == NULL)
     {
         printf("Unable to open the file, Plz try again !\n");
@@ -231,24 +234,33 @@ void delete_contact(){
     }
     else
     {
-        contact p;
+        
         int flag = 0;
         
-        while ( fread ( & p , sizeof ( p) , 1 , fp ) != 0 ) {
-              if(strcmp(name,p.name)!=0)
-                fwrite ( & p, sizeof ( p ) , 1 , temp ) ;  
-            else
+        while ( fread ( & p , sizeof ( p) , 1 , fp ) == 1) {
+              if(strcmp(name,p.name)==0){
                 flag=1;
+                continue;
+              }
+                fwrite ( & p, sizeof ( p ) , 1 , temp ) ;   
         }
-        if(flag==0){
+        fclose ( fp ) ;  
+        fclose ( temp) ; 
+        if(flag==1){
+            temp=fopen("temp.txt","r");
+            fp=fopen("phonebook_database.txt","w");
+            while(fread(&p,sizeof(p),1,temp)==1){
+                fwrite( & p, sizeof ( p ) , 1 , fp);
+            }
+            printf("Contact removed successfully\n");
+            fclose ( fp ) ;  
+            fclose ( temp) ;
+        }
+        else{
             printf("Contact not found\n");
         }
-        else
-        printf("Contact removed successfully\n");
-        fclose ( fp ) ;  
-        fclose ( temp) ;  
-        remove ( "phonebook_database" ) ;  
-        rename ( "temp" , "phonebook_database" ) ;
+        remove ( "temp.txt" ) ;  
+       
         
     }
 
@@ -256,14 +268,15 @@ void delete_contact(){
 
 void update_contact(){
     system("cls");
+    contact p;
     char name[20];
     printf("Enter name of the person you want to update details : ");
     scanf("%s",&name);
     
 
     FILE *fp,*temp;
-    fp = fopen("phonebook_database", "r");
-    temp = fopen("temp","w+");
+    fp = fopen("phonebook_database.txt", "r");
+    temp = fopen("temp.txt","w");
     if (fp == NULL)
     {
         printf("Unable to open the file, Plz try again !\n");
@@ -273,73 +286,72 @@ void update_contact(){
     else
     {
         int flag = 0;
-        contact p;
         while (fread(&p, sizeof(p), 1, fp) == 1)
         {
             if(strcmp(p.name,name)==0) 
             {   
+                fflush(stdin);
                 enter_details(&p);
-                fwrite(&p, sizeof(p), 1, temp);
-                system("cls");
-                printf("Data updated successfully\n");
-                flag = 1;
+                flag=1;
             }
-            else fwrite(&p,sizeof(p),1,temp);
-            fflush(stdin);
-        }
-        if(flag == 0)
-        {
-            system("cls");
-            printf("No record found\n");
+            fwrite(&p,sizeof(p),1,temp);
         }
         fclose(fp);
         fclose(temp);
-        remove("phonebook_database");
-        rename("temp","phonebook_database");
+        if(flag == 1)
+        {
+            temp=fopen("temp.txt","r");
+            fp=fopen("phonebook_database.txt","w");
+            while(fread(&p,sizeof(p),1,temp)==1){
+                fwrite(&p,sizeof(p),1,fp);
+            }
+            fclose(fp);
+            fclose(temp);
+            printf("Contact updated successfully\n");
+        }
+        else{
+            printf("Contact Not found\n");
+        }
+        sorted_insert();
+        remove("temp.txt");
         fflush(stdin);
         printf("Press any key to continue..\n");
     }
 }
 void sorted_insert(){
-    system("cls");
-    FILE* fp;
-    fp=fopen("phonebook_database","a+");
-    if(fp==NULL){
-        printf("Unable to open the file.Try again !\n");
-        printf("Press any key to continue..\n");
-        return;
+    contact* p,c;   //p for storing data and c as temporary storage to swap
+    FILE* fp=fopen("phonebook_database.txt","r");
+    fseek(fp,0,SEEK_END);
+    int n=ftell(fp)/sizeof(contact); //tells no. of contacts
+    rewind(fp);
+    p=(contact*)calloc(n,sizeof(contact));
+
+    for(int i=0;i<n;i++){
+        fread(&p[i],sizeof(contact),1,fp);
     }
-    int flag=0;
-    contact c,p;
-    enter_details(&c);
-    char* remaining_data;
-    while (fread(&p, sizeof(p), 1, fp) == 1)
-        {
-            if(strcmp(p.name,c.name)>0) 
-            {   
-                long int curr=ftell(fp);
-                fseek(fp,0,SEEK_END);
-                long int end=ftell(fp);
-                long int len=end-curr;
-                remaining_data=(char*)malloc(sizeof(char)*len);
-                fread(remaining_data,1,len,fp);
-                flag = 1;
-                break;
+
+    fclose(fp);
+    for(int i=0;i<n;i++){
+        for(int j=i+1;j<n;j++){
+            if(strcmp(p[i].name,p[j].name)>0){
+                c=p[i];
+                p[i]=p[j];
+                p[j]=c;
             }
-            else fwrite(&p,sizeof(p),1,fp);
-            fflush(stdin);
         }
-        if(flag==1){
-            fwrite(&c,sizeof(c),1,fp);
-            fputs(remaining_data,fp);
-        }
-        else{
-            fwrite(&c,sizeof(c),1,fp);
-        }
+    }
+
+    fp=fopen("phonebook_database.txt","w");
+
+    for(int i=0;i<n;i++){
+        fwrite(&p[i],sizeof(contact),1,fp);
+    }
+    fclose(fp);
+
 }
 void delete_all_contacts(){
     system("cls");
-    remove("./phonebook_database");
+    remove("phonebook_database.txt");
     printf("All contacts deleted successfully.Phonebook is empty now\n");
     printf("Press any key to continue..\n");
 }
