@@ -59,6 +59,7 @@ The `contact` structure contains the following fields:
 
 - `print_choices()`: Displays the main menu choices for the user.
 - `add_contact()`: Allows the user to add a new contact with details.
+- `enter_details(contact* p)`: Allows the user to enter contact information.
 - `display_all_contacts()`: Displays all contacts stored in the phonebook.
 - `search_contact()`: Allows the user to search for a contact by name.
 - `delete_contact()`: Allows the user to delete a contact by name.
